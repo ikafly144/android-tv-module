@@ -67,6 +67,11 @@ jobs:
           fetch-depth: 0
           submodules: true
 
+      - name: Ensure executable permissions
+        run: |
+          chmod +x *.sh *.py || :
+          chmod -R +x bin/ module/ || :
+
       - name: Set up Python
         run: pip install --no-cache-dir cloudscraper beautifulsoup4
 
