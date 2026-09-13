@@ -1,0 +1,124 @@
+enable-module-update = true
+parallel-jobs = 1
+
+[DisneyPlus]
+app-name = "Disney+"
+pkg-name = "com.disney.disneyplus"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/disney/disney-android-tv/"
+
+[PrimeVideo]
+app-name = "Prime Video"
+pkg-name = "com.amazon.amazonvideo.livingroom"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/amazon-mobile-llc/prime-video-android-tv-android-tv/"
+
+[Netflix]
+app-name = "Netflix"
+pkg-name = "com.netflix.ninja"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+excluded-patches = "'Clone Netflix'"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/netflix-inc/netflix-android-tv/"
+
+[HBOMax]
+app-name = "HBO Max"
+pkg-name = "com.wbd.hbomax"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/warnermedia-direct-llc/hbo-max-stream-movies-tv-android-tv/"
+
+[Peacock]
+app-name = "Peacock"
+pkg-name = "com.peacocktv.peacockandroid"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/peacock-tv-llc/peacock-tv-android-tv/"
+
+[Tubi]
+app-name = "Tubi"
+pkg-name = "com.tubitv"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/tubi-tv/tubi-free-movies-live-tv-android-tv/"
+
+[ViX]
+app-name = "ViX"
+pkg-name = "com.univision.prendetv"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/univision-communications-inc/vix-tv-deportes-y-noticias-fire-tv-android-tv/"
+
+[PlutoTV]
+app-name = "Pluto TV"
+pkg-name = "tv.pluto.android"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/pluto-inc/pluto-tv-android-tv/"
+
+[ParamountPlus]
+app-name = "Paramount+"
+pkg-name = "com.cbs.ott"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/cbs-interactive-inc/paramount-2/"
+
+[Twitch]
+app-name = "Twitch"
+pkg-name = "tv.twitch.android.app"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/twitch-interactive-inc/twitch-android-tv/"
+
+[ESPN]
+app-name = "ESPN"
+pkg-name = "com.espn.score_center"
+patches-source = "ajstrick81/morphe-androidtv-patches"
+cli-source = "MorpheApp/morphe-cli"
+rv-brand = "Morphe ATV"
+build-mode = "both"
+version = "auto"
+include-stock = "split"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/disney/espn-android-tv/"
