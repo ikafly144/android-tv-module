@@ -1,34 +1,56 @@
 #!/usr/bin/env python3
 """
 APKMirror Helper using cloudscraper & BeautifulSoup
-Replicates the reliable download mechanism used by crimera/twitter-apk
+Replicates the reliable download mechanism used by crimera/twitter-apk and ikafly144/piko-module
 """
 import sys
 import os
 import re
+import time
 import argparse
+import urllib.parse
 import cloudscraper
 from bs4 import BeautifulSoup
 
-import urllib.parse
-
 def get_scraper():
-    scraper = cloudscraper.create_scraper(
-        browser={
-            'browser': 'chrome',
-            'platform': 'windows',
-            'desktop': True
-        }
-    )
+    scraper = cloudscraper.create_scraper()
+    scraper.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+    })
     return scraper
+
+def safe_get(scraper, url: str, referer: str = None, max_retries: int = 3):
+    headers = {}
+    if referer:
+        headers["Referer"] = referer
+    for attempt in range(max_retries):
+        try:
+            r = scraper.get(url, headers=headers)
+            if r.status_code == 200:
+                return r
+            elif r.status_code in (429, 503, 504):
+                wait = (attempt + 1) * 3
+                print(f"Request to {url} returned {r.status_code}, waiting {wait}s...", file=sys.stderr)
+                time.sleep(wait)
+            else:
+                print(f"Request to {url} returned status {r.status_code}", file=sys.stderr)
+                return r
+        except Exception as e:
+            print(f"Request to {url} failed with exception: {e}", file=sys.stderr)
+            time.sleep(2)
+    return None
 
 def sanitize_version(version: str) -> str:
     return re.sub(r'[^a-zA-Z0-9]+', '-', version).strip('-').lower()
 
+def compact_version(version: str) -> str:
+    return re.sub(r'[^a-zA-Z0-9]', '', version).lower()
+
 def get_pkg_name(scraper, base_url: str) -> str:
     try:
-        r = scraper.get(base_url)
-        if r.status_code == 200:
+        r = safe_get(scraper, base_url)
+        if r and r.status_code == 200:
             soup = BeautifulSoup(r.content, "html.parser")
             link = soup.find("a", href=re.compile(r"details\?id=([a-zA-Z0-9_\.]+)"))
             if link and "href" in link.attrs:
@@ -47,9 +69,9 @@ def get_pkg_name(scraper, base_url: str) -> str:
     return ""
 
 def get_versions_list(scraper, base_url: str) -> list[str]:
-    r = scraper.get(base_url)
-    if r.status_code != 200:
-        raise Exception(f"Failed to fetch {base_url}: {r.status_code}")
+    r = safe_get(scraper, base_url)
+    if not r or r.status_code != 200:
+        raise Exception(f"Failed to fetch {base_url}")
     soup = BeautifulSoup(r.content, "html.parser")
     versions = []
     for span in soup.find_all("span", {"class": "infoSlide-value"}):
@@ -66,52 +88,46 @@ def get_versions_list(scraper, base_url: str) -> list[str]:
                     versions.append(v)
     return versions
 
+def is_version_match(href: str, v_slug: str, v_compact: str) -> bool:
+    href_l = href.lower()
+    if "#" in href_l:
+        return False
+    if not (href_l.startswith("/apk/") or "apkmirror.com/apk/" in href_l):
+        return False
+    if any(x in href_l for x in ("apk-download", "variant-", "download.php", "/author/", "/apk/page/")):
+        return False
+    if v_slug in href_l:
+        return True
+    href_compact = re.sub(r'[^a-zA-Z0-9]', '', href_l)
+    if v_compact and len(v_compact) >= 4 and v_compact in href_compact:
+        return True
+    return False
+
 def find_version_page(scraper, base_url: str, version: str):
     app_slug = base_url.rstrip('/').split('/')[-1]
     v_slug = sanitize_version(version)
+    v_compact = compact_version(version)
     
-    # First: look directly on the base listing page for the version link
-    try:
-        r = scraper.get(base_url)
-        if r.status_code == 200:
-            soup = BeautifulSoup(r.content, "html.parser")
-            for a in soup.find_all("a", href=True):
-                href = a["href"]
-                href_l = href.lower()
-                if v_slug in href_l and not any(x in href_l for x in ("apk-download", "variant-", "download.php", "/author/", "/apk/page/")):
-                    full_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
-                    try:
-                        r2 = scraper.get(full_url)
-                        if r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
-                            return full_url, r2
-                    except Exception:
-                        pass
-    except Exception:
-        pass
+    # 1. Base listing page (most reliable & avoids guessing)
+    r = safe_get(scraper, base_url)
+    if r and r.status_code == 200:
+        soup = BeautifulSoup(r.content, "html.parser")
+        matching_links = []
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if is_version_match(href, v_slug, v_compact):
+                matching_links.append(href)
+        
+        # Sort candidates: prefer those containing '-release' and matching exact slug
+        matching_links.sort(key=lambda h: (1 if "-release" in h.lower() else 0, 1 if v_slug in h.lower() else 0), reverse=True)
+        
+        for href in matching_links[:3]:
+            full_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
+            r2 = safe_get(scraper, full_url, referer=base_url)
+            if r2 and r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
+                return full_url, r2
 
-    # Second: search APKMirror using the app search feature
-    search_terms = f"{app_slug.replace('-', ' ')} {version}"
-    search_url = f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={urllib.parse.quote(search_terms)}"
-    print(f"Searching APKMirror: {search_url}", file=sys.stderr)
-    try:
-        r_search = scraper.get(search_url)
-        if r_search.status_code == 200:
-            soup = BeautifulSoup(r_search.content, "html.parser")
-            for a in soup.find_all("a", href=True):
-                href = a["href"]
-                href_l = href.lower()
-                if v_slug in href_l and not any(x in href_l for x in ("apk-download", "variant-", "download.php", "/author/", "/apk/page/")):
-                    full_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
-                    try:
-                        r2 = scraper.get(full_url)
-                        if r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
-                            return full_url, r2
-                    except Exception:
-                        pass
-    except Exception as e:
-        print(f"Search failed: {e}", file=sys.stderr)
-
-    # Third: try candidate URLs constructed from app_slug and v_slug
+    # 2. Try candidate URLs
     candidates = [
         f"{base_url.rstrip('/')}/{app_slug}-{v_slug}-release/",
         f"{base_url.rstrip('/')}/{app_slug}-{v_slug}/",
@@ -119,12 +135,28 @@ def find_version_page(scraper, base_url: str, version: str):
         f"{base_url.rstrip('/')}/{v_slug}/",
     ]
     for url in candidates:
-        try:
-            r = scraper.get(url)
-            if r.status_code == 200 and ("table" in r.text or "downloadButton" in r.text):
-                return url, r
-        except Exception:
-            pass
+        r2 = safe_get(scraper, url, referer=base_url)
+        if r2 and r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
+            return url, r2
+
+    # 3. Search APKMirror fallback
+    search_terms = f"{app_slug.replace('-', ' ')} {version}"
+    search_url = f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={urllib.parse.quote(search_terms)}"
+    print(f"Searching APKMirror: {search_url}", file=sys.stderr)
+    r_search = safe_get(scraper, search_url, referer=base_url)
+    if r_search and r_search.status_code == 200:
+        soup = BeautifulSoup(r_search.content, "html.parser")
+        matching_search = []
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if is_version_match(href, v_slug, v_compact):
+                matching_search.append(href)
+        matching_search.sort(key=lambda h: (1 if "-release" in h.lower() else 0, 1 if v_slug in h.lower() else 0), reverse=True)
+        for href in matching_search[:3]:
+            full_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
+            r2 = safe_get(scraper, full_url, referer=search_url)
+            if r2 and r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
+                return full_url, r2
 
     raise Exception(f"Could not find APKMirror page for version '{version}' at {base_url}")
 
@@ -151,7 +183,7 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
     
     soup = BeautifulSoup(resp.content, "html.parser")
     table = soup.find("div", {"class": ["table", "variants-table"]})
-    variants = []
+    raw_variants = []
     
     if table:
         rows = table.find_all("div", recursive=False)[1:]
@@ -160,121 +192,111 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
             if not cells:
                 continue
             
+            link_el = row.find("a", {"class": "accent_color"})
+            if not link_el or not link_el.get("href"):
+                continue
+            
+            href = link_el["href"].strip()
+            if href.startswith("#") or "all_versions" in href or "variant-" in href:
+                continue
+            
             badge = row.find("span", {"class": "apkm-badge"})
             is_bundle = bool(badge and badge.text.strip().upper() == "BUNDLE")
-            
-            link_el = row.find("a", {"class": "accent_color"})
-            if not link_el or not link_el.get("href") or "variant-" in link_el.get("href", ""):
-                continue
             
             variant_arch = "universal"
             if len(cells) > 1:
                 variant_arch = cells[1].get_text(strip=True).lower()
             
-            href = link_el["href"]
             variant_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
-            variants.append({
+            raw_variants.append({
                 "is_bundle": is_bundle,
                 "url": variant_url,
                 "arch": variant_arch
             })
     
-    # If no variants in table, check if this page itself has a direct downloadButton
-    if not variants:
+    # If no variants in table, check if page itself has downloadButton
+    if not raw_variants:
         dl_btn = soup.find("a", {"class": re.compile(r"downloadButton")})
         if dl_btn and dl_btn.get("href"):
-            href = dl_btn["href"]
-            variant_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
-            variants.append({
-                "is_bundle": False,
-                "url": variant_url,
-                "arch": "universal"
-            })
+            href = dl_btn["href"].strip()
+            if href and not href.startswith("#"):
+                variant_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
+                raw_variants.append({
+                    "is_bundle": False,
+                    "url": variant_url,
+                    "arch": "universal"
+                })
     
-    if not variants:
+    if not raw_variants:
         raise Exception(f"No variants found for {version}")
     
-    selected = None
+    # Sort variants by priority: bundle first, requested arch first
     target_arch = arch.lower() if arch else "all"
     
-    for v in variants:
+    def variant_score(v):
+        score = 0
         if v["is_bundle"]:
-            if target_arch in ("all", "both") or target_arch in v["arch"] or "universal" in v["arch"]:
-                selected = v
-                break
-    
-    if not selected:
-        for v in variants:
-            if target_arch in ("all", "both") or target_arch in v["arch"] or "universal" in v["arch"]:
-                selected = v
-                break
-                
-    if not selected:
-        selected = variants[0]
-        
-    print(f"Selected variant (bundle={selected['is_bundle']}, arch={selected['arch']}): {selected['url']}", file=sys.stderr)
-    
-    import time
+            score += 100
+        if target_arch in ("all", "both"):
+            score += 10
+        elif target_arch in v["arch"]:
+            score += 20
+        elif "universal" in v["arch"]:
+            score += 10
+        return score
 
-    r_variant = None
-    for attempt in range(3):
-        try:
-            r_variant = scraper.get(selected["url"], headers={"Referer": version_url})
-            if r_variant.status_code == 200:
-                break
-        except Exception:
-            pass
-        time.sleep(2)
-        
-    if not r_variant or r_variant.status_code != 200:
-        raise Exception(f"Failed to fetch variant page: {selected['url']}")
+    ordered_variants = sorted(raw_variants, key=variant_score, reverse=True)
     
-    soup_var = BeautifulSoup(r_variant.content, "html.parser")
-    dl_btn = soup_var.find("a", {"class": "downloadButton"})
-    if not dl_btn or not dl_btn.get("href"):
-        raise Exception(f"Download button not found on {selected['url']}")
-    
-    dl_page_href = dl_btn["href"]
-    dl_page_url = "https://www.apkmirror.com" + dl_page_href if dl_page_href.startswith("/") else dl_page_href
-    
-    r_dl = None
     last_err = None
-    for attempt in range(3):
+    for idx, selected in enumerate(ordered_variants):
+        print(f"Trying variant {idx+1}/{len(ordered_variants)} (bundle={selected['is_bundle']}, arch={selected['arch']}): {selected['url']}", file=sys.stderr)
         try:
-            r_dl = scraper.get(dl_page_url, headers={"Referer": selected["url"]})
-            if r_dl.status_code == 200:
-                break
-            else:
-                print(f"Attempt {attempt}: status code {r_dl.status_code}, body: {r_dl.text[:300]}", file=sys.stderr)
+            r_variant = safe_get(scraper, selected["url"], referer=version_url)
+            if not r_variant or r_variant.status_code != 200:
+                print(f"  Variant page returned {getattr(r_variant, 'status_code', None)}, skipping", file=sys.stderr)
+                continue
+            
+            soup_var = BeautifulSoup(r_variant.content, "html.parser")
+            dl_btn = soup_var.find("a", {"class": re.compile(r"downloadButton")})
+            if not dl_btn or not dl_btn.get("href"):
+                print("  Download button not found, skipping", file=sys.stderr)
+                continue
+            
+            dl_page_href = dl_btn["href"].strip()
+            dl_page_url = "https://www.apkmirror.com" + dl_page_href if dl_page_href.startswith("/") else dl_page_href
+            
+            r_dl = safe_get(scraper, dl_page_url, referer=selected["url"])
+            if not r_dl or r_dl.status_code != 200:
+                print(f"  Download page returned {getattr(r_dl, 'status_code', None)}, skipping", file=sys.stderr)
+                continue
+            
+            soup_dl = BeautifulSoup(r_dl.content, "html.parser")
+            direct_link = soup_dl.find("a", href=re.compile(r"download\.php"))
+            if not direct_link:
+                direct_link = soup_dl.find("a", {"rel": "nofollow", "href": re.compile(r"download\.php|/wp-content/")})
+            if not direct_link:
+                direct_link = soup_dl.find("a", {"rel": "nofollow"})
+            if not direct_link or not direct_link.get("href"):
+                print("  Direct link not found on download page, skipping", file=sys.stderr)
+                continue
+            
+            direct_href = direct_link["href"].strip()
+            direct_url = "https://www.apkmirror.com" + direct_href if direct_href.startswith("/") else direct_href
+            
+            actual_output = output
+            if selected["is_bundle"]:
+                if not actual_output.endswith(".apkm"):
+                    actual_output = f"{output}.apkm"
+            
+            download_file(scraper, direct_url, dl_page_url, actual_output)
+            print(actual_output)
+            return actual_output
         except Exception as e:
             last_err = e
-            print(f"Attempt {attempt} exception: {type(e).__name__}: {e}", file=sys.stderr)
-        time.sleep(2)
-        
-    if not r_dl or r_dl.status_code != 200:
-        code = r_dl.status_code if r_dl else f"Exception: {last_err}"
-        raise Exception(f"Failed to fetch download page ({code}): {dl_page_url}")
-    
-    soup_dl = BeautifulSoup(r_dl.content, "html.parser")
-    direct_link = soup_dl.find("a", href=re.compile(r"download\.php"))
-    if not direct_link:
-        direct_link = soup_dl.find("a", {"rel": "nofollow", "href": re.compile(r"download\.php|/wp-content/")})
-    if not direct_link:
-        direct_link = soup_dl.find("a", {"rel": "nofollow"})
-    if not direct_link or not direct_link.get("href"):
-        raise Exception(f"Direct download link not found on {dl_page_url}")
-    
-    direct_href = direct_link["href"]
-    direct_url = "https://www.apkmirror.com" + direct_href if direct_href.startswith("/") else direct_href
-    
-    actual_output = output
-    if selected["is_bundle"]:
-        if not actual_output.endswith(".apkm"):
-            actual_output = f"{output}.apkm"
-    
-    download_file(scraper, direct_url, dl_page_url, actual_output)
-    print(actual_output)
-    return actual_output
+            print(f"  Variant attempt encountered error: {e}", file=sys.stderr)
+            continue
+            
+    raise Exception(f"All variants failed for {version}. Last error: {last_err}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="APKMirror Helper")
