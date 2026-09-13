@@ -526,14 +526,21 @@ get_apkmirror_pkg_name() {
 get_apkmirror_resp() {
 	__APKMIRROR_URL__="$1"
 	__APKMIRROR_CAT__="${1##*/}"
+	if [ -n "${pkg_name-}" ]; then
+		__APKMIRROR_PKG_NAME__="$pkg_name"
+		return 0
+	fi
 	if [ -f "download_apkmirror.py" ]; then
 		local pycmd="python3"
 		if ! command -v python3 >/dev/null 2>&1; then pycmd="python"; fi
 		if $pycmd -c "import cloudscraper, bs4" 2>/dev/null; then
 			if pkg=$($pycmd download_apkmirror.py --pkg-name "$1" 2>/dev/null); then
-				__APKMIRROR_PKG_NAME__="$pkg"
-				return 0
+				if [ -n "$pkg" ]; then
+					__APKMIRROR_PKG_NAME__="$pkg"
+					return 0
+				fi
 			fi
+			return 0
 		fi
 	fi
 	__APKMIRROR_RESP__=$(req "${1}" -) || return 1

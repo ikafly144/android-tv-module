@@ -18,6 +18,15 @@ def get_scraper():
             'desktop': True
         }
     )
+    scraper.headers.update({
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+    })
     return scraper
 
 def sanitize_version(version: str) -> str:
@@ -26,17 +35,21 @@ def sanitize_version(version: str) -> str:
 def get_pkg_name(scraper, base_url: str) -> str:
     r = scraper.get(base_url)
     if r.status_code != 200:
-        raise Exception(f"Failed to fetch {base_url}: {r.status_code}")
+        return ""
     soup = BeautifulSoup(r.content, "html.parser")
-    link = soup.find("a", {"class": "accent_color", "href": re.compile(r"id=")})
+    link = soup.find("a", href=re.compile(r"details\?id=([a-zA-Z0-9_\.]+)"))
     if link and "href" in link.attrs:
-        m = re.search(r"id=([^&\"'#]+)", link["href"])
+        m = re.search(r"details\?id=([a-zA-Z0-9_\.]+)", link["href"])
         if m:
             return m.group(1)
-    # Default for twitter
+    for a in soup.find_all("a", href=True):
+        if "id=" in a["href"]:
+            m = re.search(r"id=([a-zA-Z0-9_\.]+)", a["href"])
+            if m:
+                return m.group(1)
     if "twitter" in base_url.lower():
         return "com.twitter.android"
-    raise Exception("Package name not found")
+    return ""
 
 def get_versions_list(scraper, base_url: str) -> list[str]:
     r = scraper.get(base_url)
