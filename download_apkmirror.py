@@ -202,17 +202,21 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
     dl_page_url = "https://www.apkmirror.com" + dl_page_href if dl_page_href.startswith("/") else dl_page_href
     
     r_dl = None
+    last_err = None
     for attempt in range(3):
         try:
             r_dl = scraper.get(dl_page_url, headers={"Referer": selected["url"]})
             if r_dl.status_code == 200:
                 break
-        except Exception:
-            pass
+            else:
+                print(f"Attempt {attempt}: status code {r_dl.status_code}", file=sys.stderr)
+        except Exception as e:
+            last_err = e
+            print(f"Attempt {attempt} exception: {type(e).__name__}: {e}", file=sys.stderr)
         time.sleep(2)
         
     if not r_dl or r_dl.status_code != 200:
-        code = r_dl.status_code if r_dl else "None"
+        code = r_dl.status_code if r_dl else f"Exception: {last_err}"
         raise Exception(f"Failed to fetch download page ({code}): {dl_page_url}")
     
     soup_dl = BeautifulSoup(r_dl.content, "html.parser")
