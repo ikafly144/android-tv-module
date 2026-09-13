@@ -115,10 +115,16 @@ get_prebuilts() {
 			tag_name=$(jq -r '.tag_name' <<<"$resp") || return 1
 			matches=$(jq -e '.assets | map(select(.name | (endswith("asc") or endswith("json")) | not))' <<<"$resp") || return 1
 			if [ "$(jq 'length' <<<"$matches")" -gt 1 ]; then
-				local matches_new
-				matches_new=$(jq -e -r 'map(select(.name | contains("-dev") | not))' <<<"$matches")
-				if [ "$(jq 'length' <<<"$matches_new")" -eq 1 ]; then
-					matches=$matches_new
+				local matches_tag
+				matches_tag=$(jq -e -r --arg tag "${tag_name#v}" 'map(select(.name | contains($tag)))' <<<"$matches" 2>/dev/null)
+				if [ "$(jq 'length' <<<"$matches_tag" 2>/dev/null)" -eq 1 ]; then
+					matches=$matches_tag
+				else
+					local matches_new
+					matches_new=$(jq -e -r 'map(select(.name | contains("-dev") | not))' <<<"$matches" 2>/dev/null)
+					if [ "$(jq 'length' <<<"$matches_new" 2>/dev/null)" -eq 1 ]; then
+						matches=$matches_new
+					fi
 				fi
 			fi
 			if [ "$(jq 'length' <<<"$matches")" -eq 0 ]; then
