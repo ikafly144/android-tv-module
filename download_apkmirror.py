@@ -10,6 +10,8 @@ import argparse
 import cloudscraper
 from bs4 import BeautifulSoup
 
+import urllib.parse
+
 def get_scraper():
     scraper = cloudscraper.create_scraper(
         browser={
@@ -18,35 +20,28 @@ def get_scraper():
             'desktop': True
         }
     )
-    scraper.headers.update({
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "same-origin",
-        "Sec-Fetch-User": "?1",
-        "Upgrade-Insecure-Requests": "1",
-    })
     return scraper
 
 def sanitize_version(version: str) -> str:
     return re.sub(r'[^a-zA-Z0-9]+', '-', version).strip('-').lower()
 
 def get_pkg_name(scraper, base_url: str) -> str:
-    r = scraper.get(base_url)
-    if r.status_code != 200:
-        return ""
-    soup = BeautifulSoup(r.content, "html.parser")
-    link = soup.find("a", href=re.compile(r"details\?id=([a-zA-Z0-9_\.]+)"))
-    if link and "href" in link.attrs:
-        m = re.search(r"details\?id=([a-zA-Z0-9_\.]+)", link["href"])
-        if m:
-            return m.group(1)
-    for a in soup.find_all("a", href=True):
-        if "id=" in a["href"]:
-            m = re.search(r"id=([a-zA-Z0-9_\.]+)", a["href"])
-            if m:
-                return m.group(1)
+    try:
+        r = scraper.get(base_url)
+        if r.status_code == 200:
+            soup = BeautifulSoup(r.content, "html.parser")
+            link = soup.find("a", href=re.compile(r"details\?id=([a-zA-Z0-9_\.]+)"))
+            if link and "href" in link.attrs:
+                m = re.search(r"details\?id=([a-zA-Z0-9_\.]+)", link["href"])
+                if m:
+                    return m.group(1)
+            for a in soup.find_all("a", href=True):
+                if "id=" in a["href"]:
+                    m = re.search(r"id=([a-zA-Z0-9_\.]+)", a["href"])
+                    if m:
+                        return m.group(1)
+    except Exception:
+        pass
     if "twitter" in base_url.lower():
         return "com.twitter.android"
     return ""
@@ -76,22 +71,47 @@ def find_version_page(scraper, base_url: str, version: str):
     v_slug = sanitize_version(version)
     
     # First: look directly on the base listing page for the version link
-    r = scraper.get(base_url)
-    if r.status_code == 200:
-        soup = BeautifulSoup(r.content, "html.parser")
-        for a in soup.find_all("a", href=True):
-            href = a["href"]
-            href_l = href.lower()
-            if v_slug in href_l and not any(x in href_l for x in ("apk-download", "variant-", "download.php", "/author/", "/apk/page/")):
-                full_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
-                try:
-                    r2 = scraper.get(full_url)
-                    if r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
-                        return full_url, r2
-                except Exception:
-                    pass
+    try:
+        r = scraper.get(base_url)
+        if r.status_code == 200:
+            soup = BeautifulSoup(r.content, "html.parser")
+            for a in soup.find_all("a", href=True):
+                href = a["href"]
+                href_l = href.lower()
+                if v_slug in href_l and not any(x in href_l for x in ("apk-download", "variant-", "download.php", "/author/", "/apk/page/")):
+                    full_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
+                    try:
+                        r2 = scraper.get(full_url)
+                        if r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
+                            return full_url, r2
+                    except Exception:
+                        pass
+    except Exception:
+        pass
 
-    # Second: try candidate URLs constructed from app_slug and v_slug
+    # Second: search APKMirror using the app search feature
+    search_terms = f"{app_slug.replace('-', ' ')} {version}"
+    search_url = f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={urllib.parse.quote(search_terms)}"
+    print(f"Searching APKMirror: {search_url}", file=sys.stderr)
+    try:
+        r_search = scraper.get(search_url)
+        if r_search.status_code == 200:
+            soup = BeautifulSoup(r_search.content, "html.parser")
+            for a in soup.find_all("a", href=True):
+                href = a["href"]
+                href_l = href.lower()
+                if v_slug in href_l and not any(x in href_l for x in ("apk-download", "variant-", "download.php", "/author/", "/apk/page/")):
+                    full_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
+                    try:
+                        r2 = scraper.get(full_url)
+                        if r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
+                            return full_url, r2
+                    except Exception:
+                        pass
+    except Exception as e:
+        print(f"Search failed: {e}", file=sys.stderr)
+
+    # Third: try candidate URLs constructed from app_slug and v_slug
     candidates = [
         f"{base_url.rstrip('/')}/{app_slug}-{v_slug}-release/",
         f"{base_url.rstrip('/')}/{app_slug}-{v_slug}/",
