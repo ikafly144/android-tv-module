@@ -11,10 +11,13 @@ import cloudscraper
 from bs4 import BeautifulSoup
 
 def get_scraper():
-    scraper = cloudscraper.create_scraper()
-    scraper.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-    })
+    scraper = cloudscraper.create_scraper(
+        browser={
+            'browser': 'chrome',
+            'platform': 'windows',
+            'desktop': True
+        }
+    )
     return scraper
 
 def sanitize_version(version: str) -> str:
@@ -209,7 +212,7 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
             if r_dl.status_code == 200:
                 break
             else:
-                print(f"Attempt {attempt}: status code {r_dl.status_code}", file=sys.stderr)
+                print(f"Attempt {attempt}: status code {r_dl.status_code}, body: {r_dl.text[:300]}", file=sys.stderr)
         except Exception as e:
             last_err = e
             print(f"Attempt {attempt} exception: {type(e).__name__}: {e}", file=sys.stderr)
