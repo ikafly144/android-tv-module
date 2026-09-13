@@ -178,8 +178,19 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
         
     print(f"Selected variant (bundle={selected['is_bundle']}, arch={selected['arch']}): {selected['url']}", file=sys.stderr)
     
-    r_variant = scraper.get(selected["url"])
-    if r_variant.status_code != 200:
+    import time
+
+    r_variant = None
+    for attempt in range(3):
+        try:
+            r_variant = scraper.get(selected["url"], headers={"Referer": version_url})
+            if r_variant.status_code == 200:
+                break
+        except Exception:
+            pass
+        time.sleep(2)
+        
+    if not r_variant or r_variant.status_code != 200:
         raise Exception(f"Failed to fetch variant page: {selected['url']}")
     
     soup_var = BeautifulSoup(r_variant.content, "html.parser")
@@ -190,12 +201,26 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
     dl_page_href = dl_btn["href"]
     dl_page_url = "https://www.apkmirror.com" + dl_page_href if dl_page_href.startswith("/") else dl_page_href
     
-    r_dl = scraper.get(dl_page_url)
-    if r_dl.status_code != 200:
-        raise Exception(f"Failed to fetch download page: {dl_page_url}")
+    r_dl = None
+    for attempt in range(3):
+        try:
+            r_dl = scraper.get(dl_page_url, headers={"Referer": selected["url"]})
+            if r_dl.status_code == 200:
+                break
+        except Exception:
+            pass
+        time.sleep(2)
+        
+    if not r_dl or r_dl.status_code != 200:
+        code = r_dl.status_code if r_dl else "None"
+        raise Exception(f"Failed to fetch download page ({code}): {dl_page_url}")
     
     soup_dl = BeautifulSoup(r_dl.content, "html.parser")
-    direct_link = soup_dl.find("a", {"rel": "nofollow"})
+    direct_link = soup_dl.find("a", href=re.compile(r"download\.php"))
+    if not direct_link:
+        direct_link = soup_dl.find("a", {"rel": "nofollow", "href": re.compile(r"download\.php|/wp-content/")})
+    if not direct_link:
+        direct_link = soup_dl.find("a", {"rel": "nofollow"})
     if not direct_link or not direct_link.get("href"):
         raise Exception(f"Direct download link not found on {dl_page_url}")
     
