@@ -1,6 +1,6 @@
 {
-  "version": "v7.8.100 (patches 1.36.0.mpp)",
-  "versionCode": 2,
-  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/2/peacock-morphe-atv-module-v7.8.100-all.zip",
+  "version": "v7.8.100 (patches 1.37.1.mpp)",
+  "versionCode": 3,
+  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/3/peacock-morphe-atv-module-v7.8.100-all.zip",
   "changelog": "https://raw.githubusercontent.com/ikafly144/android-tv-module/update/build.md"
 }
