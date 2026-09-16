@@ -1,6 +1,6 @@
 {
-  "version": "v7.9.0.61 (patches 1.37.1.mpp)",
-  "versionCode": 3,
-  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/3/hbo-max-morphe-atv-module-v7.9.0.61-all.zip",
+  "version": "v7.9.0.61 (patches 1.37.2.mpp)",
+  "versionCode": 4,
+  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/4/hbo-max-morphe-atv-module-v7.9.0.61-all.zip",
   "changelog": "https://raw.githubusercontent.com/ikafly144/android-tv-module/update/build.md"
 }
