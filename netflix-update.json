@@ -1,6 +1,6 @@
 {
-  "version": "v13.0.1 build 25028 (patches 1.37.2.mpp)",
-  "versionCode": 4,
-  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/4/netflix-morphe-atv-module-v13.0.1build25028-all.zip",
+  "version": "v13.0.1 build 25028 (patches 1.37.3.mpp)",
+  "versionCode": 5,
+  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/5/netflix-morphe-atv-module-v13.0.1build25028-all.zip",
   "changelog": "https://raw.githubusercontent.com/ikafly144/android-tv-module/update/build.md"
 }

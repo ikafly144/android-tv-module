@@ -7,7 +7,7 @@ Peacock: 7.8.100
 
 [crimera/piko](https://github.com/crimera/piko) | [crimera/piko-newx](https://github.com/crimera/piko-newx)
   
-Patches: ajstrick81/patches-1.37.2.mpp  
-[Changelog](https://github.com/ajstrick81/morphe-androidtv-patches/releases/tag/v1.37.2)
+Patches: ajstrick81/patches-1.37.3.mpp  
+[Changelog](https://github.com/ajstrick81/morphe-androidtv-patches/releases/tag/v1.37.3)
 
 CLI: MorpheApp/morphe-desktop-1.16.0-all.jar    
