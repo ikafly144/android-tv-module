@@ -1,6 +1,6 @@
 {
-  "version": "v6.11.1 (patches 1.38.0.mpp)",
-  "versionCode": 9,
-  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/9/espn-morphe-atv-module-v6.11.1-all.zip",
+  "version": "v6.11.1 (patches 1.40.1.mpp)",
+  "versionCode": 10,
+  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/10/espn-morphe-atv-module-v6.11.1-all.zip",
   "changelog": "https://raw.githubusercontent.com/ikafly144/android-tv-module/update/build.md"
 }
