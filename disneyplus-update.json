@@ -1,6 +1,6 @@
 {
-  "version": "v26.16.0+rc2-2026.09.08 (patches 1.40.1.mpp)",
-  "versionCode": 10,
-  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/10/disney+-morphe-atv-module-v26.16.0+rc2-2026.09.08-all.zip",
+  "version": "v26.16.0+rc2-2026.09.08 (patches 1.40.3.mpp)",
+  "versionCode": 11,
+  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/11/disney+-morphe-atv-module-v26.16.0+rc2-2026.09.08-all.zip",
   "changelog": "https://raw.githubusercontent.com/ikafly144/android-tv-module/update/build.md"
 }
