@@ -8,7 +8,7 @@ PrimeVideo: 6.23.23+v15.5.0.70-armv7a
 
 [crimera/piko](https://github.com/crimera/piko) | [crimera/piko-newx](https://github.com/crimera/piko-newx)
   
-Patches: ajstrick81/patches-1.41.0.mpp  
-[Changelog](https://github.com/ajstrick81/morphe-androidtv-patches/releases/tag/v1.41.0)
+Patches: ajstrick81/patches-1.42.2.mpp  
+[Changelog](https://github.com/ajstrick81/morphe-androidtv-patches/releases/tag/v1.42.2)
 
 CLI: MorpheApp/morphe-desktop-1.18.1-all.jar    
