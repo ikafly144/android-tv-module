@@ -1,6 +1,6 @@
 {
-  "version": "v13.0.0.2 (patches 1.42.3.mpp)",
-  "versionCode": 17,
-  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/17/twitch-morphe-atv-module-v13.0.0.2-all.zip",
+  "version": "v13.0.0.2 (patches 1.46.1.mpp)",
+  "versionCode": 20,
+  "zipUrl": "https://github.com/ikafly144/android-tv-module/releases/download/20/twitch-morphe-atv-module-v13.0.0.2-all.zip",
   "changelog": "https://raw.githubusercontent.com/ikafly144/android-tv-module/update/build.md"
 }
